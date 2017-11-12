@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title> Transporte Público Chile </title>
+
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <!--<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>-->
+    <script src="js/jquery.min.js"></script>
+    <!--<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">-->
+    <link href="css/jquery-ui.css" rel="stylesheet">
+    <script src="js/jquery-ui.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/map_style.js"></script>
+    <script src="regression.js"></script>
+    <link href="css/roundslider.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Raleway:300" rel="stylesheet">
+    <script src="js/roundslider.min.js"></script>
+    <script src="real_points.js"></script>
+    <script src="data_regression.js"></script>
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAOrXjyqc-gEKIY97nxXXMinCPt9UfivZc&libraries=visualization&callback=initMap">
+    </script>
+
+    <style>
+      html, body, body *, p, a, h1, h2, h3, h4, h5, h6, div, span, input, textarea,
+      form, table { font-family: 'Raleway', sans-serif; }
+    </style>
+    <style>
+      #container {
+        height: 100%;
+        width: 100%;
+      }
+       #map {
+         height: 100%;
+         width: 80%;
+         float:left;
+       }
+       #panel{
+         height: 100%;
+         width: 20%;
+         float:left;
+         box-shadow: 2px 0 4px rgba(0,0,0,.15);
+       }
+       .sub_panel{
+         height: 100%;
+         width: 100%;
+         padding: 20px 20px 20px 20px;
+       }
+       #time_slider .rs-range-color  {
+           background-color: #e9e9e9;
+       }
+       #time_slider .rs-handle:after  {
+           background-color: #000000;
+       }
+       #time_slider .rs-border  {
+           border-color: #c5c5c5;
+       }
+       .slider_container {
+         width: 100%;
+         padding-top: 20px;
+         padding-bottom: 10px;
+         margin: auto;
+       }
+       #time_slider_container {
+         width: 100%;
+         padding-top: 100%;
+         position: relative;
+       }
+
+
+    </style>
+
+  </head>
+  <body>
+
+    <div id="container">
+      <div id="panel">
+
+        <div class="sub_panel">
+          <h3 style="text-align:center;font-weight:bold;">Transporte Público</h3>
+          <h4 style="text-align:center;font-weight:bold;">Santiago de Chile</h4>
+          <br>
+          <p style="text-align:center;">Visualización de la demanda de usuarios de la Línea 1 del Metro</p>
+          <div class="slider_container">
+            <!--<input id="slider1" type="text" data-slider-tooltip="hide" data-slider-min="0" data-slider-max="20" data-slider-step="1" data-slider-value="3"/>-->
+            <!--<input id="slider1" type="range" min="1" max="24" step="1" value="10" onchange="slider1_change(this.value)" class="slider">-->
+            <div id="slider1"></div>
+          </div>
+          <span id="slider1_valLabel">Radio: <span id="slider1_val">22</span></span>
+
+          <div class="slider_container">
+            <div id="slider2"></div>
+          </div>
+          <span id="slider2_valLabel">Máx. Demanda: <span id="slider2_val">200</span></span>
+
+          <div class="slider_container">
+            <div id="slider3"></div>
+          </div>
+          <span id="slider3_valLabel">Metro L1: <span id="slider3_val"></span></span>
+
+          <div style="width:100%;padding-top:20px;margin-bottom:-10px;">
+          <span id="time_slider_label" style="text-align:center;display:block;">Hora:</span>
+          </div>
+          <div class="slider_container" style="width:70%;">
+            <div id="time_slider_container">
+              <div id="time_slider"></div>
+            </div>
+          </div>
+
+          <div class="slider_container">
+            <input type="radio" name="points" value="predicted" onclick="handleClick(this);" checked="true"> Puntos de Regresión<br>
+            <input type="radio" name="points" value="real" onclick="handleClick(this);"> Puntos Reales<br>
+          </div>
+
+
+
+        </div>
+      </div>
+      <div id="map"></div>
+    </div>
+
+    <script>
+      //Google API key: AIzaSyAOrXjyqc-gEKIY97nxXXMinCPt9UfivZc
+
+      var map, heatmap, dataArray;
+      var pointsType = "predicted";
+
+      function initMap() {
+        var santiago = new google.maps.LatLng(-33.45, -70.666667);
+        var lat_range = [-33.4633239658, -33.4364954];
+        var lng_range = [-70.661923223, -70.6438200455];
+        var center_point = new google.maps.LatLng((lat_range[1]+lat_range[0])/2, (lng_range[1]+lng_range[0])/2);
+        var points = getPoints2(lat_range, lng_range, 12);
+        dataArray = new google.maps.MVCArray(points);
+
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 14,
+          center: center_point,
+          mapTypeId: 'roadmap',
+          mapTypeControl: false,
+          streetViewControl: false,
+          styles: getMapStyle()
+        });
+
+        heatmap = new google.maps.visualization.HeatmapLayer({
+          data: dataArray,
+          radius: 22,
+          maxIntensity: 200,
+          map: map
+        });
+      }
+
+      function getPoints(value) {
+        var e1 = [-33.457157,-70.705963]; //las rejas
+        var e2 = [-33.442691,-70.64572000000001]; //santa_lucia
+        var e3 = [-33.4373235,-70.6332348]; //baquedano
+        var e4 = [-33.433107,-70.62658499999999]; //salvador
+        var e5 = [-33.428341,-70.619209]; //manuel montt
+        var e6 = [-33.418145,-70.601353]; //tobalaba
+        var e7 = [-33.409251,-70.56873399999999]; //manquehue
+        var estaciones = [e1,e2,e3,e4,e5,e6,e7];
+        var range = 100;
+        var points = [];
+        if (value < 8){
+          var lats = linspace(estaciones[value - 1][0],estaciones[value][0],range);
+          var lngs = linspace(estaciones[value - 1][1],estaciones[value][1],range);
+          for (j = 0; j < lats.length; ++j) {
+            points.push(new google.maps.LatLng(lats[j], lngs[j]));
+          }
+        }
+        return points;
+      }
+
+      function getPoints2(lat_range, lng_range, time) {
+
+        var points = [];
+        var weights = [];
+        var idx = parseInt(Math.round(time));
+        var data = data_reg[idx];
+        for(i = 0; i < data.length; i++){
+          weights.push(data[i][2]);
+        }
+        var new_min = 0;
+        var new_max = 100;
+        var min = 0;
+        //var min = Math.min.apply(null, weights);
+        var max = 36709;
+        //var max = Math.max.apply(null, weights);
+        for (i = 0; i < weights.length; i++) {
+          var w = (weights[i]-min)*(new_max-new_min)/(max-min) + new_min; //normalizado
+          var p = {location: new google.maps.LatLng(data[i][0], data[i][1]), weight: w};
+          //console.log(p);
+          points[i] = p;
+        }
+        return points;
+
+      }
+
+
+      function points_by_value(range){
+        var e1 = [-33.457157,-70.705963]; //las rejas
+        var e2 = [-33.442691,-70.64572000000001]; //santa_lucia
+        var e3 = [-33.4373235,-70.6332348]; //baquedano
+        var e4 = [-33.433107,-70.62658499999999]; //salvador
+        var e5 = [-33.428341,-70.619209]; //manuel montt
+        var e6 = [-33.418145,-70.601353]; //tobalaba
+        var e7 = [-33.409251,-70.56873399999999]; //manquehue
+        var estaciones = [e1,e2,e3,e4,e5,e6,e7];
+        var points = [];
+        for (i = 0, len = estaciones.length - 1; i < len; ++i) {
+          var lats = linspace(estaciones[i][0],estaciones[i+1][0],range);
+          var lngs = linspace(estaciones[i][1],estaciones[i+1][1],range);
+          for (j = 0; j < lats.length; ++j) {
+            points.push(new google.maps.LatLng(lats[j], lngs[j]));
+          }
+        }
+        return points;
+      }
+
+      function linspace(a,b,n) {
+        if(typeof n === "undefined") n = Math.max(Math.round(b-a)+1,1);
+        if(n<2) { return n===1?[a]:[]; }
+        var i,ret = Array(n);
+        n--;
+        for(i=n;i>=0;i--) { ret[i] = (i*b+(n-i)*a)/n; }
+        return ret;
+      }
+
+      function parseTime(value) {
+        var result = "";
+        var n = value.toString().split('.');
+        if (n.length == 1) result += n[0]+":00";
+        else if (parseInt(n[1]) == 25) result += n[0]+":15";
+        else if (parseInt(n[1]) == 5)  result += n[0]+":30";
+        else if (parseInt(n[1]) == 75)  result += n[0]+":45";
+        return result;
+      }
+
+      function showPoints(time_value){
+        var lat_range = [-33.4633239658, -33.4364954];
+        var lng_range = [-70.661923223, -70.6438200455];
+
+        //empty dataArray
+        while(dataArray.getLength() > 0) dataArray.pop();
+
+        var points = [];
+        if (pointsType == "real"){
+          //getRealPoints depending on time value
+          points = getRealPoints(time_value);
+        }
+        else if (pointsType == "predicted"){
+          //getPoints depending on value
+          points = getPoints2(lat_range, lng_range, time_value);
+        }
+
+        //fill dataArray with new points
+        for (i = 0; i < points.length; ++i) {
+         dataArray.push(points[i]);
+        }
+
+      }
+
+      function getRealPoints(time){
+        var points = [];
+        var weights = [];
+        for (i = 0; i < real_points.length; i++) {
+          if (real_points[i][2] == Math.round(time)){
+            points.push([real_points[i][0], real_points[i][1]]);
+            weights.push(real_points[i][3]);
+          }
+        }
+        var new_min = 0;
+        var new_max = 200;
+        var min = 0;//Math.min.apply(null, weights);
+        var max = 42541;//Math.max.apply(null, weights);
+        for (i = 0; i < weights.length; i++) {
+          var point = points[i];
+          var w = (weights[i]-min)*(new_max-new_min)/(max-min) + new_min; //normalizado
+          var p = {location: new google.maps.LatLng(point[0], point[1]), weight: w};
+          points[i] = p;
+        }
+        return points;
+      }
+
+
+      function handleClick(radioButton) {
+        pointsType = radioButton.value;
+        var time_slider_value = $("#time_slider").data("roundSlider").option("value");
+        //document.getElementById("slider3_valLabel").innerHTML = time_slider_value;
+        showPoints(time_slider_value);
+    	}
+
+    </script>
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAOrXjyqc-gEKIY97nxXXMinCPt9UfivZc&libraries=visualization&callback=initMap">
+    </script>
+    <script>
+
+      $( function() {
+        $( "#slider1" ).slider({
+					orientation: "horizontal",
+					range: "min",
+					min: 1,
+					max: 50,
+					value: 22,
+					slide: function(event, ui) {
+						$("#slider1_val").html(ui.value);
+						if(heatmap == null) return;
+						heatmap.set('radius', ui.value);
+					}
+				});
+
+        $( "#slider2" ).slider({
+					orientation: "horizontal",
+					range: "min",
+					min: 1,
+					max: 1000,
+					value: 200,
+					slide: function(event, ui) {
+						$("#slider2_val").html(ui.value);
+						if(heatmap == null) return;
+						heatmap.set('maxIntensity', ui.value);
+					}
+				});
+
+        $( "#slider3" ).slider({
+					orientation: "horizontal",
+					range: "min",
+					min: 1,
+					max: 10,
+					value: 1,
+					slide: function(event, ui) {
+						$("#slider3_val").html(ui.value);
+
+            //empty dataArray
+            while(dataArray.getLength() > 0) dataArray.pop();
+            //getPoints depending on value
+            var points = getPoints(parseInt(ui.value));
+            //fill dataArray with new points
+            for (i = 0; i < points.length; ++i) {
+             dataArray.push(points[i]);
+            }
+					}
+				});
+
+        $("#time_slider").roundSlider({
+          radius: 80,
+          width: 14,
+          min:0,
+          max:24,
+          //step:0.25,
+          step:1,
+          value: 12,
+          handleSize: "+10",
+          handleShape: "round",
+          sliderType: "min-range",
+          //showTooltip: false,
+          editableTooltip: false,
+          change: function (ui) {
+            $(".rs-tooltip").text(parseTime(ui.value));
+            if (ui.value < 10){
+              $('.rs-tooltip').css({
+                'margin-left': '-15.5px'
+              });
+            }
+            else{
+              $('.rs-tooltip').css({
+                'margin-left': '-20px'
+              });
+            }
+            showPoints(ui.value);
+          },
+          drag: function (ui) {
+            $(".rs-tooltip").text(parseTime(ui.value));
+            if (ui.value < 10){
+              $('.rs-tooltip').css({
+                'margin-left': '-15.5px'
+              });
+            }
+            else{
+              $('.rs-tooltip').css({
+                'margin-left': '-20px'
+              });
+            }
+            showPoints(ui.value);
+          }
+        });
+
+        $('#time_slider').css({
+          'position': 'absolute',
+          'top': '0',
+          'left': '0',
+          'bottom': '0',
+          'right': '0',
+          'width': 'auto',
+          'height': 'auto'
+        });
+        // var time_slider_width = $('#time_slider').width();
+        // $('#time_slider').css({
+        //   'height': time_slider_width + 'px'
+        // });
+        $('.rs-container').css({
+          'width': '100%',
+          'height': '100%'
+        });
+
+
+
+      } );
+      $(document).ready(function(){
+        $(".rs-tooltip").text(parseTime(12));
+        $('.rs-tooltip').css({
+          'margin-left': '-20px'
+        });
+      })
+    </script>
+
+  </body>
+</html>
