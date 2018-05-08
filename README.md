@@ -9,12 +9,12 @@ Este *Heatmap* tiene una vista 3D creada con el framework de Uber [deck.gl](http
 
 ## Instalación y ejemplos
 
-Para hacer funcionar la aplicación deberás instalar algunos paquetes. Para más detalles, seguir las instrucciones dadas en el [repositorio de deck.gl](github.com/uber/deck.gl).
+Para hacer funcionar la aplicación deberás instalar algunos paquetes. Para más detalles, seguir las instrucciones dadas en el [repositorio de deck.gl](http://github.com/uber/deck.gl).
 
 La parte 3D de esta aplicación de Transporte Público en Santiago, es una versión modificada del [ejemplo de Heatmap](github.com/uber/deck.gl/tree/master/examples/website/3d-heatmap) del github de deck.gl, por lo que también corresponde seguir las instrucciones en ese repositorio para poder correr la aplicación.
 
 Para la parte 2D de la aplicación, creada con Google Maps API, para hacer funcionar el mapa a desplegar en la web, debes seguir las instrucciones del próximo bloque [Mapas].
-Un ejemplo para crear *heatmaps* con Google Maps se encuentra en este [link](developers.google.com/maps/documentation/javascript/examples/layer-heatmap).
+Un ejemplo para crear *heatmaps* con Google Maps se encuentra en este [link](http://developers.google.com/maps/documentation/javascript/examples/layer-heatmap).
 
 ## Mapas
 
